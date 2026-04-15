@@ -116,6 +116,7 @@ namespace IoTClient.Clients.PLC
                 {
                     result.IsSucceed = false;
                     result.Err = ex.Message;
+                    result.Exception = ex;
                     result.AddErr2List();
                     return result.EndTime();
                 }
@@ -188,7 +189,12 @@ namespace IoTClient.Clients.PLC
         /// <returns></returns>
         public Result<byte[]> Read(string address, ushort length, bool isBit = false)
         {
-            if (!socket?.Connected ?? true) Connect();
+            if (!socket?.Connected ?? true)
+            {
+                var connectResult = Connect();
+                if (!connectResult.IsSucceed)
+                    return new Result<byte[]>(connectResult);
+            }
             var result = new Result<byte[]>();
             try
             {
@@ -253,6 +259,7 @@ namespace IoTClient.Clients.PLC
             catch (SocketException ex)
             {
                 result.IsSucceed = false;
+                result.Exception = ex;
                 if (ex.SocketErrorCode == SocketError.TimedOut)
                 {
                     result.Err = "连接超时";
@@ -261,6 +268,13 @@ namespace IoTClient.Clients.PLC
                 {
                     result.Err = ex.Message;
                 }
+                socket?.SafeClose();
+            }
+            catch (Exception ex)
+            {
+                result.IsSucceed = false;
+                result.Err = ex.Message;
+                result.Exception = ex;
                 socket?.SafeClose();
             }
             finally
@@ -571,6 +585,7 @@ namespace IoTClient.Clients.PLC
             catch (SocketException ex)
             {
                 result.IsSucceed = false;
+                result.Exception = ex;
                 if (ex.SocketErrorCode == SocketError.TimedOut)
                 {
                     result.Err = "连接超时";
@@ -578,7 +593,6 @@ namespace IoTClient.Clients.PLC
                 else
                 {
                     result.Err = ex.Message;
-                    result.Exception = ex;
                 }
                 socket?.SafeClose();
             }
